@@ -3,28 +3,45 @@ const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
 const cors = require('cors');
+const { Document, Packer, Paragraph } = require('docx');
+const PDFLib = require('pdf-lib');
 
 const app = express();
-const port = process.env.PORT || 3000;
-
-// تفعيل CORS
 app.use(cors());
+const port = process.env.PORT || 3000;
 
 const upload = multer({ dest: 'uploads/' });
 
-app.get('/', (req, res) => {
-  res.send('✅ QuickTools Backend Running!');
-});
+app.get('/', (req, res) => res.send('✅ QuickTools Backend Running!'));
 
-app.post('/upload', upload.single('file'), (req, res) => {
-  if(!req.file) return res.status(400).send('No file uploaded');
+app.post('/upload', upload.single('file'), async (req, res) => {
+    if(!req.file) return res.status(400).send('No file uploaded');
 
-  const outputPath = path.join(__dirname, req.file.originalname);
-  fs.renameSync(req.file.path, outputPath);
+    try {
+        const arrayBuffer = fs.readFileSync(req.file.path);
+        const pdfDoc = await PDFLib.PDFDocument.load(arrayBuffer);
 
-  res.download(outputPath, req.file.originalname, () => {
-    fs.unlinkSync(outputPath);
-  });
+        let text = '';
+        pdfDoc.getPages().forEach(page => {
+            text += page.getTextContent?.() ?? '';
+        });
+
+        const doc = new Document({
+            sections: [{ children: [new Paragraph(text)] }]
+        });
+
+        const outputPath = path.join(__dirname, req.file.originalname.replace('.pdf','.docx'));
+        const buffer = await Packer.toBuffer(doc);
+        fs.writeFileSync(outputPath, buffer);
+
+        res.download(outputPath, () => {
+            fs.unlinkSync(outputPath);
+            fs.unlinkSync(req.file.path);
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Error converting PDF');
+    }
 });
 
 app.listen(port, () => console.log(`Server running on port ${port}`));
