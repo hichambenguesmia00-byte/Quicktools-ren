@@ -9,15 +9,16 @@ const port = process.env.PORT || 3000;
 // إعداد Multer
 const upload = multer({ dest: 'uploads/' });
 
-// Test route
+// Route اختبار السيرفر
 app.get('/', (req, res) => {
   res.send('✅ QuickTools Backend Running!');
 });
 
-// Upload & return file (مضمون يعمل على Render)
+// رفع ملف وإرجاعه مباشرة
 app.post('/upload', upload.single('file'), (req, res) => {
   if(!req.file) return res.status(400).send('No file uploaded');
-  const outputPath = path.join(__dirname, 'uploads', req.file.originalname);
+
+  const outputPath = path.join(__dirname, req.file.originalname);
 
   fs.renameSync(req.file.path, outputPath);
 
