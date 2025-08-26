@@ -10,10 +10,15 @@ const app = express();
 app.use(cors());
 const port = process.env.PORT || 3000;
 
+// إعداد multer لتخزين الملفات مؤقتاً
 const upload = multer({ dest: 'uploads/' });
+
+// تحقق من وجود مجلد uploads
+if (!fs.existsSync('uploads')) fs.mkdirSync('uploads');
 
 app.get('/', (req, res) => res.send('✅ QuickTools Backend Running!'));
 
+// مسار استقبال PDF وتحويله إلى Word
 app.post('/upload', upload.single('file'), async (req, res) => {
     if(!req.file) return res.status(400).send('No file uploaded');
 
